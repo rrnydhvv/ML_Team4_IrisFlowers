@@ -5,6 +5,9 @@ from src.preprocess import normalize_dataframe, apply_normalize
 
 
 def knn_predict(train_df, x_new, feature_cols, k):
+    """
+    Dự đoán class mẫu mới
+    """
     dist = np.zeros(len(train_df))
 
     for i, col in enumerate(feature_cols):
@@ -21,6 +24,9 @@ def knn_predict(train_df, x_new, feature_cols, k):
 
 
 def evaluate_knn(df, feature_cols, label_col, k):
+    """
+   đánh giá mức độ chính xác của KNN sử dụng phương pháp leave-one-out (LOO)
+    """
     correct = 0
 
     for i in range(len(df)):
@@ -39,11 +45,6 @@ def evaluate_knn(df, feature_cols, label_col, k):
 
 
 def run_knn_train_test(df, test_size=0.2, random_state=42):
-    """Split `df` into train/test, normalize based on train, then evaluate KNN on test set.
-
-    Returns: (results_list, best_k, best_acc)
-    where results_list is [(k, accuracy_on_test), ...]
-    """
     feature_cols = [
         "sepal_length",
         "sepal_width",
@@ -52,17 +53,17 @@ def run_knn_train_test(df, test_size=0.2, random_state=42):
     ]
     label_col = "species"
 
-    # Shuffle and split
+    # Trộn, chia dữ liệu
     df_shuffled = df.sample(frac=1, random_state=random_state).reset_index(drop=True)
     n_test = max(1, int(len(df) * test_size))
     train_df = df_shuffled.iloc[:-n_test].reset_index(drop=True)
     test_df = df_shuffled.iloc[-n_test:].reset_index(drop=True)
 
-    # Normalize using train params
+    # chuẩn hóa dữ liệu
     train_norm, params = normalize_dataframe(train_df, feature_cols)
     test_norm = apply_normalize(test_df, feature_cols, params)
 
-    # First: choose best k using only the training set (leave-one-out on train)
+    # Chọn K tối ưu
     train_results = []
     print("=== CHON K TREN TAP TRAIN (LOO) ===")
     for k in range(1, 31):
@@ -72,7 +73,7 @@ def run_knn_train_test(df, test_size=0.2, random_state=42):
 
     best_k, best_train_acc = max(train_results, key=lambda x: x[1])
 
-    # Build model object to use for prediction
+    # đóng gói mô hình
     model = {
         "train_norm": train_norm,
         "params": params,
@@ -81,7 +82,7 @@ def run_knn_train_test(df, test_size=0.2, random_state=42):
         "best_k": best_k,
     }
 
-    # Then: evaluate that best_k on the held-out test set
+    # đánh giá mô hình với k tối ưu trên tập test
     correct = 0
     for i in range(len(test_norm)):
         x_new = test_norm.iloc[i][feature_cols].values
@@ -101,9 +102,7 @@ def run_knn_train_test(df, test_size=0.2, random_state=42):
 
 
 def fit_knn(train_df, k_min=1, k_max=30):
-    """Fit KNN on training dataframe and select best k using LOO.
-
-    Returns a model dict containing normalized train, params, feature/label cols and best_k.
+    """Huấn luyện KNN chỉ trên tập train và chọn k tốt nhất bằng LOO
     """
     feature_cols = [
         "sepal_length",
@@ -135,9 +134,7 @@ def fit_knn(train_df, k_min=1, k_max=30):
 
 
 def predict_single(model, row):
-    """Predict label for a single sample.
-
-    `row` can be a pandas Series, dict, or list/array of feature values (in feature_cols order).
+    """dự đoán nhãn 1 mẫu
     """
     import pandas as pd
 
@@ -157,7 +154,7 @@ def predict_single(model, row):
 
 
 def predict_batch(model, df):
-    """Predict labels for a dataframe of samples (returns list of predictions)."""
+    """dự đoán nhãn nhiều mẫu"""
     df_norm = apply_normalize(df, model["feature_cols"], model["params"])
     preds = []
     for i in range(len(df_norm)):
