@@ -79,6 +79,75 @@ def apply_normalize(df, feature_cols, params):
     return df_norm
 
 
+def one_hot_encode(df, columns):
+    """
+    Apply one-hot encoding to specified categorical columns.
+    
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        Input dataframe
+    columns : list
+        List of column names to one-hot encode
+        
+    Returns:
+    --------
+    df_encoded : pd.DataFrame
+        Dataframe with one-hot encoded columns
+    categories : dict
+        Dictionary mapping column names to list of unique categories
+    """
+    df_encoded = df.copy()
+    categories = {}
+    
+    for col in columns:
+        # Get unique categories (sorted for consistency)
+        cats = sorted(df[col].unique())
+        categories[col] = cats
+        
+        # Create one-hot columns
+        for cat in cats:
+            col_name = f"{col}_{cat}"
+            df_encoded[col_name] = (df[col] == cat).astype(int)
+        
+        # Drop original column
+        df_encoded = df_encoded.drop(columns=[col])
+    
+    return df_encoded, categories
+
+
+def apply_one_hot_encode(df, columns, categories):
+    """
+    Apply one-hot encoding using pre-computed categories.
+    
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        Input dataframe
+    columns : list
+        List of column names to one-hot encode
+    categories : dict
+        Dictionary mapping column names to list of unique categories
+        
+    Returns:
+    --------
+    df_encoded : pd.DataFrame
+        Dataframe with one-hot encoded columns
+    """
+    df_encoded = df.copy()
+    
+    for col in columns:
+        cats = categories[col]
+        
+        for cat in cats:
+            col_name = f"{col}_{cat}"
+            df_encoded[col_name] = (df[col] == cat).astype(int)
+        
+        df_encoded = df_encoded.drop(columns=[col])
+    
+    return df_encoded
+
+
 def clean_and_normalize_iris(input_path, output_path):
     """
     Read IRIS dataset, normalize features, and save to new file.
@@ -126,5 +195,20 @@ if __name__ == "__main__":
     
     input_file = os.path.join(project_root, "data", "IRIS.csv")
     output_file = os.path.join(project_root, "data", "IRIS_cleaned.csv")
+    output_file_ohe = os.path.join(project_root, "data", "IRIS_cleaned_ohe.csv")
     
+    # Step 1: Normalize
     df_cleaned, params = clean_and_normalize_iris(input_file, output_file)
+    
+    # Step 2: One-hot encode the species column
+    print("\n=== ONE-HOT ENCODING ===" )
+    df_ohe, categories = one_hot_encode(df_cleaned, ["species"])
+    
+    print(f"Categories: {categories}")
+    print(f"Columns after OHE: {list(df_ohe.columns)}")
+    print(f"\nFirst 5 rows:\n{df_ohe.head()}")
+    
+    # Save one-hot encoded file
+    df_ohe.to_csv(output_file_ohe, index=False)
+    print(f"\n=== DA LUU FILE ONE-HOT ENCODED ===")
+    print(f"Output: {output_file_ohe}")
