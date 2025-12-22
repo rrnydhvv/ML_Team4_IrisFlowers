@@ -8,6 +8,7 @@ if str(project_root) not in sys.path:
 
 import pandas as pd
 from src.models.KNN import run_knn_train_test, predict_single
+from src.models.Naive_Bayes import GaussianNaiveBayes, accuracy_score
 
 
 data_path = project_root / "data" / "IRIS_cleaned.csv"
@@ -24,3 +25,14 @@ if __name__ == "__main__":
     print("Sample features:")
     print(sample_row.to_dict())
     print("Predicted species:", pred)
+
+    # Demo Gaussian Naive Bayes
+    gnb = GaussianNaiveBayes()
+    X = df[feature_cols].values
+    y = df["species"].values
+    gnb.fit(X, y)
+    y_pred = gnb.predict(X)
+    acc = accuracy_score(y, y_pred)
+    print("\n=== GAUSSIAN NAIVE BAYES ===")
+    print(f"Accuracy on entire dataset: {acc:.4f}")
+    
