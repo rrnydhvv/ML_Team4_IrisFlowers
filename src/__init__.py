@@ -7,7 +7,5 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 import pandas as pd
-from src.models.KNN import run_knn_train_test, fit_knn, predict_single, predict_batch
+from models.KNN import knn_predict_weighted, evaluate_knn_kfold, run_knn_train_test, save_model_KNN, load_model_KNN
 
-# Expose KNN models at project root level
-__all__ = ["run_knn_train_test", "fit_knn", "predict_single", "predict_batch", "project_root"]
