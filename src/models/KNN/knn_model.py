@@ -1,6 +1,3 @@
-"""
-KNN model training and prediction functions.
-"""
 
 import pandas as pd
 from .knn_core import knn_predict_weighted
@@ -8,10 +5,6 @@ from .knn_cv import evaluate_knn_kfold
 
 
 def fit_knn(train_df, k_min=1, k_max=30, n_folds=5):
-    """
-    Huấn luyện Weighted KNN và chọn k tốt nhất bằng K-Fold CV.
-    
-    """
     feature_cols = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
     label_col = "species"
 
@@ -33,9 +26,6 @@ def fit_knn(train_df, k_min=1, k_max=30, n_folds=5):
 
 
 def predict_single(model, row):
-    """
-    Dự đoán một mẫu mới (Weighted KNN).
-    """
     feature_cols = model["feature_cols"]
     
     if isinstance(row, pd.Series):
@@ -50,9 +40,6 @@ def predict_single(model, row):
 
 
 def predict_batch(model, df):
-    """
-    Dự đoán nhiều mẫu (Weighted KNN).
-    """
     preds = []
     for i in range(len(df)):
         x_new = df.iloc[i][model["feature_cols"]].values

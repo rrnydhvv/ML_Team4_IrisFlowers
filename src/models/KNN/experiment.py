@@ -4,16 +4,12 @@ Weighted KNN training/testing experiment.
 
 import pandas as pd
 from .knn_core import knn_predict_weighted
+from src.models.KNN.knn_model import fit_knn, predict_single, predict_batch
 from .knn_cv import evaluate_knn_kfold
 
 
 def run_knn_train_test(df, test_size=0.2, random_state=42):
-    """
-    Huấn luyện Weighted KNN: chọn k tối ưu bằng 5-Fold CV trên train, đánh giá trên test.
-    Chọn k NHỎ NHẤT trong số các k đạt accuracy cao nhất (xử lý floating-point precision).
-    
-    Note: df phải là dữ liệu đã chuẩn hóa (IRIS_cleaned.csv).
-    """
+
     feature_cols = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
     label_col = "species"
 
@@ -57,7 +53,6 @@ def run_knn_train_test(df, test_size=0.2, random_state=42):
             correct += 1
 
     test_acc = correct / len(test_norm)
-
     print("\n=== KẾT LUẬN (Weighted KNN) ===")
     print(f"Best k (nhỏ nhất trong các k tốt nhất): {best_k}")
     print(f"Accuracy trung bình trên train (5-Fold CV): {best_train_acc:.4f}")

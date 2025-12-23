@@ -1,15 +1,10 @@
-"""
-K-Fold cross-validation evaluation for Weighted KNN.
-"""
+
 
 import numpy as np
 from .knn_core import knn_predict_weighted
 
 
 def evaluate_knn_kfold(df, feature_cols, label_col, k, n_folds=5, random_state=42):
-    """
-    Đánh giá Weighted KNN bằng K-Fold cross-validation.
-    """
     df_shuffled = df.sample(frac=1, random_state=random_state).reset_index(drop=True)
     n = len(df_shuffled)
     fold_size = n // n_folds

@@ -7,9 +7,6 @@ import numpy as np
 
 
 def knn_predict_weighted(train_df, x_new, feature_cols, k):
-    """
-    Dự đoán class mẫu mới với trọng số nghịch đảo khoảng cách (Weighted KNN)
-    """
     dist = np.zeros(len(train_df))
 
     for i, col in enumerate(feature_cols):

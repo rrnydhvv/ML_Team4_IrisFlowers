@@ -1,6 +1,4 @@
-"""
-KNN package - Weighted K-Nearest Neighbors implementation with K-Fold CV.
-"""
+
 
 from .knn_core import knn_predict_weighted
 from .knn_cv import evaluate_knn_kfold
