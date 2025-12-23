@@ -1,6 +1,3 @@
-"""
-Weighted KNN training/testing experiment.
-"""
 
 import pandas as pd
 from .knn_core import knn_predict_weighted

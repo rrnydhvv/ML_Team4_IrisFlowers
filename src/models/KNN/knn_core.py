@@ -1,6 +1,4 @@
-"""
-Core KNN prediction function with distance weighting.
-"""
+
 
 import pandas as pd
 import numpy as np

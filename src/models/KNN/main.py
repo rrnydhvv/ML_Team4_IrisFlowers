@@ -23,7 +23,7 @@ if __name__ == "__main__":
     print("=" * 60)
     
     df = pd.read_csv('data/IRIS_cleaned.csv')
-    print(f"\n✓ Đã tải dữ liệu: {len(df)} mẫu")
+    print(f"\n Đã tải dữ liệu: {len(df)} mẫu")
     print(f"  Columns: {list(df.columns)}")
     
     # Run experiment
@@ -33,5 +33,5 @@ if __name__ == "__main__":
     )
     
     print("\n" + "=" * 60)
-    print("✓ Hoàn tất!")
+    print("Hoàn tất")
     print("=" * 60)
