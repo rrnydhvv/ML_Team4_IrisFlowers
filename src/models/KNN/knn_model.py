@@ -1,6 +1,5 @@
 """
 KNN model training and prediction functions.
-Giả định dữ liệu input đã được chuẩn hóa (IRIS_cleaned.csv).
 """
 
 import pandas as pd
@@ -12,7 +11,6 @@ def fit_knn(train_df, k_min=1, k_max=30, n_folds=5):
     """
     Huấn luyện Weighted KNN và chọn k tốt nhất bằng K-Fold CV.
     
-    Note: train_df phải là dữ liệu đã chuẩn hóa.
     """
     feature_cols = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
     label_col = "species"
@@ -37,7 +35,6 @@ def fit_knn(train_df, k_min=1, k_max=30, n_folds=5):
 def predict_single(model, row):
     """
     Dự đoán một mẫu mới (Weighted KNN).
-    row phải là dữ liệu đã chuẩn hóa (cùng phạm vi như training data).
     """
     feature_cols = model["feature_cols"]
     
@@ -55,7 +52,6 @@ def predict_single(model, row):
 def predict_batch(model, df):
     """
     Dự đoán nhiều mẫu (Weighted KNN).
-    df phải là dữ liệu đã chuẩn hóa (cùng phạm vi như training data).
     """
     preds = []
     for i in range(len(df)):
