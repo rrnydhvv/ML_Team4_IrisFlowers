@@ -9,8 +9,6 @@ if str(project_root) not in sys.path:
 import pandas as pd
 from models.KNN import knn_predict_weighted, evaluate_knn_kfold, run_knn_train_test, save_model_KNN, load_model_KNN
 
-
-from src.models.KNN import run_knn_train_test, predict_single
 from src.models.Naive_Bayes import GaussianNaiveBayes, accuracy_score
 
 
