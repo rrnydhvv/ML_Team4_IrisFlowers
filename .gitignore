@@ -1,5 +1,5 @@
 # Byte-compiled / optimized / DLL files
-__pycache__/
+__pycache__
 *.py[cod]
 *$py.class
 
@@ -30,6 +30,5 @@ Thumbs.db
 *.log
 
 # Model files (nếu file lớn)
-*.pkl
 *.joblib
 *.h5
