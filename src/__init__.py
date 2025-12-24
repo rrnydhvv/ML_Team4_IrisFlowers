@@ -29,6 +29,6 @@ if __name__ == "__main__":
     gnb.fit(X, y)
     y_pred = gnb.predict(X)
     acc = accuracy_score(y, y_pred)
-    print("\n=== GAUSSIAN NAIVE BAYES ===")
+    print("\n=== GAUSSIAN NAIVE BAYES ===") 
     print(f"Accuracy on entire dataset: {acc:.4f}")
     
