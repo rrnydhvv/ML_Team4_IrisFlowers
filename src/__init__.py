@@ -7,7 +7,8 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 import pandas as pd
-from src.models.KNN import run_knn_train_test, predict_single
+from models.KNN import knn_predict_weighted, evaluate_knn_kfold, run_knn_train_test, save_model_KNN, load_model_KNN
+
 from src.models.Naive_Bayes import GaussianNaiveBayes, accuracy_score
 
 
@@ -20,11 +21,6 @@ if __name__ == "__main__":
     # Demo prediction: predict the first row's features
     feature_cols = model["feature_cols"]
     sample_row = df.iloc[0][feature_cols]
-    pred = predict_single(model, sample_row)
-    print("\n=== DEMO PREDICTION ===")
-    print("Sample features:")
-    print(sample_row.to_dict())
-    print("Predicted species:", pred)
 
     # Demo Gaussian Naive Bayes
     gnb = GaussianNaiveBayes()

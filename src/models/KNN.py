@@ -1,168 +1,122 @@
 import pandas as pd
 import numpy as np
-import sys
-from pathlib import Path
-
-# Add project root to path for imports
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-
-from src.preprocess import normalize_dataframe, apply_normalize
-
-
-def knn_predict(train_df, x_new, feature_cols, k):
-    """
-    Dự đoán class mẫu mới
-    """
+import pickle
+import matplotlib.pyplot as plt
+def knn_predict_weighted(train_df, x_new, feature_cols, k):
     dist = np.zeros(len(train_df))
-
     for i, col in enumerate(feature_cols):
         dist += (train_df[col].values - x_new[i]) ** 2
-
     dist = np.sqrt(dist)
-    train_df = train_df.copy()
-    train_df["dist"] = dist
 
-    neighbors = train_df.sort_values("dist").head(k)
-    pred_class = neighbors["species"].mode()[0]
+    df_tmp = train_df.copy()
+    df_tmp["dist"] = dist
 
-    return pred_class
+    neighbors = df_tmp.sort_values("dist").head(k)
+    epsilon = 1e-10
+    neighbors["weight"] = 1.0 / (neighbors["dist"] + epsilon)
+
+    class_weights = neighbors.groupby("species")["weight"].sum()
+    return class_weights.idxmax()
 
 
-def evaluate_knn(df, feature_cols, label_col, k):
-    """
-   đánh giá mức độ chính xác của KNN sử dụng phương pháp leave-one-out (LOO)
-    """
-    correct = 0
+def evaluate_knn_kfold(df, feature_cols, label_col, k, n_folds=5, random_state=42):
+    df_shuffled = df.sample(frac=1, random_state=random_state).reset_index(drop=True)
+    n = len(df_shuffled)
+    fold_size = n // n_folds
+    accuracies = []
 
-    for i in range(len(df)):
-        test_row = df.iloc[i]
-        train_df = df.drop(index=df.index[i])
+    for fold in range(n_folds):
+        start_idx = fold * fold_size
+        end_idx = n if fold == n_folds - 1 else start_idx + fold_size
 
-        x_new = test_row[feature_cols].values
-        y_true = test_row[label_col]
+        test_indices = list(range(start_idx, end_idx))
+        train_indices = [i for i in range(n) if i not in test_indices]
 
-        y_pred = knn_predict(train_df, x_new, feature_cols, k)
+        train_fold = df_shuffled.iloc[train_indices].reset_index(drop=True)
+        test_fold = df_shuffled.iloc[test_indices].reset_index(drop=True)
 
-        if y_pred == y_true:
-            correct += 1
+        correct = 0
+        for i in range(len(test_fold)):
+            x_new = test_fold.iloc[i][feature_cols].values
+            y_true = test_fold.iloc[i][label_col]
+            y_pred = knn_predict_weighted(train_fold, x_new, feature_cols, k)
+            if y_pred == y_true:
+                correct += 1
 
-    return correct / len(df)
+        accuracies.append(correct / len(test_fold))
+
+    return np.mean(accuracies)
 
 
 def run_knn_train_test(df, test_size=0.2, random_state=42):
-    feature_cols = [
-        "sepal_length",
-        "sepal_width",
-        "petal_length",
-        "petal_width",
-    ]
+    feature_cols = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
     label_col = "species"
 
-    # Trộn, chia dữ liệu
     df_shuffled = df.sample(frac=1, random_state=random_state).reset_index(drop=True)
     n_test = max(1, int(len(df) * test_size))
-    train_df = df_shuffled.iloc[:-n_test].reset_index(drop=True)
-    test_df = df_shuffled.iloc[-n_test:].reset_index(drop=True)
+    train_norm = df_shuffled.iloc[:-n_test].reset_index(drop=True)
+    test_norm = df_shuffled.iloc[-n_test:].reset_index(drop=True)
 
-    # chuẩn hóa dữ liệu
-    train_norm, params = normalize_dataframe(train_df, feature_cols)
-    test_norm = apply_normalize(test_df, feature_cols, params)
+    print("Chọn K bằng 5-Fold Cross-Validation trên tập train:")
+    print(f"{'k':>3} | {'Accuracy (CV)':>15}")
+    print("-" * 25)
 
-    # Chọn K tối ưu
     train_results = []
-    print("=== CHON K TREN TAP TRAIN (LOO) ===")
     for k in range(1, 31):
-        acc_train = evaluate_knn(train_norm, feature_cols, label_col, k)
-        train_results.append((k, acc_train))
-        print(f"k = {k:2d} | Accuracy (train, LOO) = {acc_train:.4f}")
+        acc = evaluate_knn_kfold(train_norm, feature_cols, label_col, k, n_folds=5, random_state=42)
+        train_results.append((k, acc))
+        print(f"{k:>3} | {acc:>15.4f}")
 
-    best_k, best_train_acc = max(train_results, key=lambda x: x[1])
+    best_train_acc = max(acc for k, acc in train_results)
+    tolerance = 1e-6
+    best_ks = [k for k, acc in train_results if abs(acc - best_train_acc) < tolerance]
+    best_k = min(best_ks)
 
-    # đóng gói mô hình
-    model = {
-        "train_norm": train_norm,
-        "params": params,
-        "feature_cols": feature_cols,
-        "label_col": label_col,
-        "best_k": best_k,
-    }
+    print(f"\nCác k đạt accuracy cao nhất (~{best_train_acc:.4f}): {sorted(best_ks)}")
+    print(f"→ Chọn k nhỏ nhất: {best_k}")
 
-    # đánh giá mô hình với k tối ưu trên tập test
     correct = 0
     for i in range(len(test_norm)):
         x_new = test_norm.iloc[i][feature_cols].values
         y_true = test_norm.iloc[i][label_col]
-        y_pred = knn_predict(train_norm, x_new, feature_cols, best_k)
+        y_pred = knn_predict_weighted(train_norm, x_new, feature_cols, best_k)
         if y_pred == y_true:
             correct += 1
 
     test_acc = correct / len(test_norm)
 
-    print("\n=== KET LUAN ===")
-    print("Best k (selected on train):", best_k)
-    print("Train accuracy (LOO) for best k:", best_train_acc)
-    print("Test accuracy for best k:", test_acc)
-
-    return train_results, best_k, best_train_acc, test_acc, model
-
-
-def fit_knn(train_df, k_min=1, k_max=30):
-    """Huấn luyện KNN chỉ trên tập train và chọn k tốt nhất bằng LOO
-    """
-    feature_cols = [
-        "sepal_length",
-        "sepal_width",
-        "petal_length",
-        "petal_width",
-    ]
-    label_col = "species"
-
-    train_norm, params = normalize_dataframe(train_df, feature_cols)
-
-    best_k = k_min
-    best_acc = -1.0
-    for k in range(k_min, k_max + 1):
-        acc = evaluate_knn(train_norm, feature_cols, label_col, k)
-        if acc > best_acc:
-            best_acc = acc
-            best_k = k
+    print("\nKết luận (KNN Weighted):")
+    print(f"Best k (nhỏ nhất trong các k tốt nhất): {best_k}")
+    print(f"Accuracy trung bình trên train (5-Fold CV): {best_train_acc:.4f}")
+    print(f"Accuracy trên tập test:                   {test_acc:.4f}")
 
     model = {
         "train_norm": train_norm,
-        "params": params,
         "feature_cols": feature_cols,
-        "label_col": label_col,
         "best_k": best_k,
     }
 
+    return train_results, best_k, best_train_acc, test_acc, model
+
+def save_model_KNN(model, path):
+    with open(path, "wb") as f:
+        pickle.dump(model, f)
+
+def load_model_KNN(path):
+    with open(path, "rb") as f:
+        model = pickle.load(f)
     return model
 
+def plot_accuracy_vs_k(train_results, best_k):
+    ks = [k for k, acc in train_results]
+    accs = [acc for k, acc in train_results]
 
-def predict_single(model, row):
-    """dự đoán nhãn 1 mẫu
-    """
-    import pandas as pd
+    plt.figure()
+    plt.plot(ks, accs, marker='o')
+    plt.scatter(best_k, accs[best_k - 1])
+    plt.axvline(best_k)
 
-    feature_cols = model["feature_cols"]
-
-    if isinstance(row, pd.Series):
-        df_row = row.to_frame().T
-    elif isinstance(row, dict):
-        df_row = pd.DataFrame([row])
-    else:
-        # assume array-like in correct order
-        df_row = pd.DataFrame([row], columns=feature_cols)
-
-    df_norm = apply_normalize(df_row, feature_cols, model["params"])
-    x_new = df_norm.iloc[0][feature_cols].values
-    return knn_predict(model["train_norm"], x_new, feature_cols, model["best_k"])
-
-
-def predict_batch(model, df):
-    """dự đoán nhãn nhiều mẫu"""
-    df_norm = apply_normalize(df, model["feature_cols"], model["params"])
-    preds = []
-    for i in range(len(df_norm)):
-        x_new = df_norm.iloc[i][model["feature_cols"]].values
-        preds.append(knn_predict(model["train_norm"], x_new, model["feature_cols"], model["best_k"]))
-    return preds
+    plt.xlabel("K")
+    plt.ylabel("Accuracy (5-Fold CV)")
+    plt.title("Accuracy theo K (KNN Weighted)")
+    plt.show()
