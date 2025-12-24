@@ -120,3 +120,4 @@ def plot_accuracy_vs_k(train_results, best_k):
     plt.ylabel("Accuracy (5-Fold CV)")
     plt.title("Accuracy theo K (KNN Weighted)")
     plt.show()
+
