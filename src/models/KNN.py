@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pickle
-
+import matplotlib.pyplot as plt
 def knn_predict_weighted(train_df, x_new, feature_cols, k):
     dist = np.zeros(len(train_df))
     for i, col in enumerate(feature_cols):
@@ -106,3 +106,17 @@ def load_model_KNN(path):
     with open(path, "rb") as f:
         model = pickle.load(f)
     return model
+
+def plot_accuracy_vs_k(train_results, best_k):
+    ks = [k for k, acc in train_results]
+    accs = [acc for k, acc in train_results]
+
+    plt.figure()
+    plt.plot(ks, accs, marker='o')
+    plt.scatter(best_k, accs[best_k - 1])
+    plt.axvline(best_k)
+
+    plt.xlabel("K")
+    plt.ylabel("Accuracy (5-Fold CV)")
+    plt.title("Accuracy theo K (KNN Weighted)")
+    plt.show()
