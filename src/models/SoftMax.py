@@ -4,7 +4,7 @@ import pickle
 import matplotlib.pyplot as plt
 
 INPUT_FILE = './data/IRIS_cleaned.csv'
-MODEL_FILE = './src/models/iris_model.pkl'
+MODEL_FILE = './src/models/softmax_model.pkl'
 LEARNING_RATE = 0.2
 EPOCHS = 5000
 CLASS_ORDER = ['Iris-setosa', 'Iris-versicolor', 'Iris-virginica']
