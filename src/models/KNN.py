@@ -75,15 +75,22 @@ def run_knn_train_test(df, test_size=0.2, random_state=42):
     print(f"\nCác k đạt accuracy cao nhất (~{best_train_acc:.4f}): {sorted(best_ks)}")
     print(f"→ Chọn k nhỏ nhất: {best_k}")
 
+    y_true_list = []
+    y_pred_list = []
+
     correct = 0
     for i in range(len(test_norm)):
         x_new = test_norm.iloc[i][feature_cols].values
         y_true = test_norm.iloc[i][label_col]
         y_pred = knn_predict_weighted(train_norm, x_new, feature_cols, best_k)
+        y_true_list.append(y_true)
+        y_pred_list.append(y_pred)
+
         if y_pred == y_true:
             correct += 1
 
     test_acc = correct / len(test_norm)
+
 
     print("\nKết luận (KNN Weighted):")
     print(f"Best k (nhỏ nhất trong các k tốt nhất): {best_k}")
@@ -94,9 +101,11 @@ def run_knn_train_test(df, test_size=0.2, random_state=42):
         "train_norm": train_norm,
         "feature_cols": feature_cols,
         "best_k": best_k,
+        "y_true_test": y_true_list,
+        "y_pred_test": y_pred_list
     }
 
-    return train_results, best_k, best_train_acc, test_acc, model
+    return (train_results, best_k, best_train_acc, test_acc, model, y_true_list, y_pred_list)
 
 def save_model_KNN(model, path):
     with open(path, "wb") as f:
@@ -120,4 +129,40 @@ def plot_accuracy_vs_k(train_results, best_k):
     plt.ylabel("Accuracy (5-Fold CV)")
     plt.title("Accuracy theo K (KNN Weighted)")
     plt.show()
+
+
+def plot_confusion_matrix(y_true, y_pred, class_labels):
+    n = len(class_labels)
+    cm = np.zeros((n, n), dtype=int)
+
+    label_to_index = {label: idx for idx, label in enumerate(class_labels)}
+
+    for yt, yp in zip(y_true, y_pred):
+        i = label_to_index[yt]
+        j = label_to_index[yp]
+        cm[i, j] += 1
+
+    plt.figure()
+    plt.imshow(cm, cmap="Blues")
+    plt.colorbar(label="Số lượng mẫu")
+
+    plt.xticks(range(n), class_labels, rotation=45)
+    plt.yticks(range(n), class_labels)
+
+    plt.xlabel("Nhãn dự đoán")
+    plt.ylabel("Nhãn thực tế")
+    plt.title("Ma trận nhầm lẫn (KNN có trọng số)")
+
+    for i in range(n):
+        for j in range(n):
+            plt.text(
+                j, i, cm[i, j],
+                ha="center",
+                va="center",
+                color="white" if cm[i, j] > cm.max() / 2 else "black"
+            )
+
+    plt.tight_layout()
+    plt.show()
+
 
