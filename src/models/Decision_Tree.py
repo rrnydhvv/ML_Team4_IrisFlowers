@@ -1,129 +1,113 @@
-import math
-import csv
 import numpy as np
+import pickle
 import os
 
 class DecisionTreeClassifier:
-    def __init__(self, max_depth=None, criterion='entropy'):
+    def __init__(self, max_depth=None, criterion="entropy"):
+        if criterion not in ("entropy", "gini"):
+            raise ValueError("criterion must be 'entropy' or 'gini'")
         self.max_depth = max_depth
-        self.criterion = criterion  # 'entropy' hoặc 'gini'
+        self.criterion = criterion
         self.tree = None
 
+    # ================= PUBLIC API =================
     def fit(self, X, y):
         self.tree = self._build_tree(X, y, depth=0)
 
     def predict(self, X):
-        predictions = []
-        for sample in X:
-            predictions.append(self._predict_sample(sample, self.tree))
-        return predictions
+        return np.array([self._predict_one(x, self.tree) for x in X])
 
+    # ================= TREE BUILD =================
     def _build_tree(self, X, y, depth):
-        if len(np.unique(y)) == 1:
-            return {'value': y[0]}
+        if self._is_pure(y):
+            return {"value": y[0]}
+
         if self.max_depth is not None and depth >= self.max_depth:
-            return {'value': self._most_common_label(y)}
-        if X.shape[0] == 0:
-            return {'value': self._most_common_label(y)}
+            return {"value": self._majority_class(y)}
 
-        best_feature, best_threshold = self._choose_best_feature(X, y)
-        if best_feature is None:
-            return {'value': self._most_common_label(y)}
+        if len(y) == 0:
+            return {"value": None}
 
-        left_X, left_y, right_X, right_y = self._split_data(X, y, best_feature, best_threshold)
+        feature, threshold = self._best_split(X, y)
+        if feature is None:
+            return {"value": self._majority_class(y)}
 
-        left_tree = self._build_tree(left_X, left_y, depth + 1)
-        right_tree = self._build_tree(right_X, right_y, depth + 1)
+        LX, Ly, RX, Ry = self._split(X, y, feature, threshold)
 
         return {
-            'feature': best_feature,
-            'threshold': best_threshold,
-            'left': left_tree,
-            'right': right_tree
+            "feature": feature,
+            "threshold": threshold,
+            "left": self._build_tree(LX, Ly, depth + 1),
+            "right": self._build_tree(RX, Ry, depth + 1)
         }
 
-    def _choose_best_feature(self, X, y):
-        best_gain = 0
-        best_feature = None
-        best_threshold = None
-        n_features = X.shape[1]
-
-        for feature in range(n_features):
-            thresholds = np.unique(X[:, feature])
-            for threshold in thresholds:
-                gain = self._information_gain(X, y, feature, threshold)
+    # ================= SPLIT LOGIC =================
+    def _best_split(self, X, y):
+        best_gain, best_f, best_t = 0, None, None
+        for f in range(X.shape[1]):
+            for t in np.unique(X[:, f]):
+                gain = self._information_gain(X, y, f, t)
                 if gain > best_gain:
-                    best_gain = gain
-                    best_feature = feature
-                    best_threshold = threshold
+                    best_gain, best_f, best_t = gain, f, t
+        return best_f, best_t
 
-        return best_feature, best_threshold
-
-    def _information_gain(self, X, y, feature, threshold):
-        if self.criterion == 'entropy':
-            parent_impurity = self._entropy(y)
-            impurity_func = self._entropy
-        elif self.criterion == 'gini':
-            parent_impurity = self._gini(y)
-            impurity_func = self._gini
-        else:
-            raise ValueError("Criterion must be 'entropy' or 'gini'")
-
-        left_X, left_y, right_X, right_y = self._split_data(X, y, feature, threshold)
-
-        if left_y.shape[0] == 0 or right_y.shape[0] == 0:
+    def _information_gain(self, X, y, f, t):
+        impurity = self._entropy if self.criterion == "entropy" else self._gini
+        parent = impurity(y)
+        LX, Ly, RX, Ry = self._split(X, y, f, t)
+        if len(Ly) == 0 or len(Ry) == 0:
             return 0
+        n = len(y)
+        child = (len(Ly)/n)*impurity(Ly) + (len(Ry)/n)*impurity(Ry)
+        return parent - child
 
-        n = y.shape[0]
-        n_left = left_y.shape[0]
-        n_right = right_y.shape[0]
-
-        weighted_impurity = (n_left / n) * impurity_func(left_y) + (n_right / n) * impurity_func(right_y)
-        return parent_impurity - weighted_impurity
-
+    # ================= METRICS =================
     def _entropy(self, y):
-        if y.shape[0] == 0:
-            return 0
-        _, counts = np.unique(y, return_counts=True)
-        probabilities = counts / y.shape[0]
-        entropy = -np.sum(probabilities * np.log2(probabilities))
-        return entropy
+        _, cnt = np.unique(y, return_counts=True)
+        p = cnt / len(y)
+        return -np.sum(p * np.log2(p))
 
     def _gini(self, y):
-        if y.shape[0] == 0:
-            return 0
-        _, counts = np.unique(y, return_counts=True)
-        probabilities = counts / y.shape[0]
-        gini = 1 - np.sum(probabilities ** 2)
-        return gini
+        _, cnt = np.unique(y, return_counts=True)
+        p = cnt / len(y)
+        return 1 - np.sum(p**2)
 
-    def _split_data(self, X, y, feature, threshold):
-        mask = X[:, feature] <= threshold
-        left_X = X[mask]
-        left_y = y[mask]
-        right_X = X[~mask]
-        right_y = y[~mask]
-        return left_X, left_y, right_X, right_y
+    # ================= UTILS =================
+    def _split(self, X, y, f, t):
+        mask = X[:, f] <= t
+        return X[mask], y[mask], X[~mask], y[~mask]
 
-    def _most_common_label(self, y):
-        if y.shape[0] == 0:
-            return None
-        values, counts = np.unique(y, return_counts=True)
-        return values[np.argmax(counts)]
+    def _is_pure(self, y):
+        return len(np.unique(y)) == 1
 
-    def _predict_sample(self, sample, tree):
-        if 'value' in tree:
-            return tree['value']
-        feature = tree['feature']
-        threshold = tree['threshold']
-        if sample[feature] <= threshold:
-            return self._predict_sample(sample, tree['left'])
-        else:
-            return self._predict_sample(sample, tree['right'])
+    def _majority_class(self, y):
+        v, c = np.unique(y, return_counts=True)
+        return v[np.argmax(c)]
 
-# Hàm để đọc dữ liệu từ CSV
-def load_iris_data(filepath):
-    data = np.genfromtxt(filepath, delimiter=',', dtype=str, skip_header=1)
-    X = data[:, :-1].astype(float)
-    y = data[:, -1]
-    return X, y
+    # ================= PREDICT =================
+    def _predict_one(self, x, node):
+        if "value" in node:
+            return node["value"]
+        return self._predict_one(
+            x,
+            node["left"] if x[node["feature"]] <= node["threshold"] else node["right"]
+        )
+
+# ================= EXPORT / LOAD  =================
+def export_model(model, filename):
+    model_data = {
+        "model": model,
+        "criterion": model.criterion,
+        "max_depth": model.max_depth,
+        "info": "Decision Tree Classifier from scratch"
+    }
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    with open(filename, "wb") as f:
+        pickle.dump(model_data, f)
+    print(f"[OK] Đã xuất Decision Tree model tại: {filename}")
+
+
+def load_model(filename):
+    with open(filename, "rb") as f:
+        model_data = pickle.load(f)
+    return model_data["model"]
