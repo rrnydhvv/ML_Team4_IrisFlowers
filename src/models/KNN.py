@@ -49,6 +49,9 @@ def evaluate_knn_kfold(df, feature_cols, label_col, k, n_folds=5, random_state=4
 
 
 def run_knn_train_test(df, test_size=0.2, random_state=42):
+    # Xử lý tên cột có khoảng trắng
+    df.columns = df.columns.str.strip()
+    
     feature_cols = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
     label_col = "species"
 
