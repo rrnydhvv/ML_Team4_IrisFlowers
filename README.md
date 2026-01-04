@@ -85,13 +85,6 @@ Mở browser và truy cập: `http://localhost:8501`
    - Petal Width (chiều rộng cánh hoa)
 3. **Click "Predict"** để xem kết quả phân loại
 
-### 4. Train lại models (nếu cần)
-
-**Train từng model riêng:**
-```bash
-jupyter notebook src/notebooks/train_decision_tree.ipynb
-```
-
 ## Dataset
 
 **Iris Dataset** - Bộ dữ liệu cổ điển trong ML
@@ -108,85 +101,3 @@ jupyter notebook src/notebooks/train_decision_tree.ipynb
 | Sepal Width | 2.0 | 4.4 | 3.05 |
 | Petal Length | 1.0 | 6.9 | 3.76 |
 | Petal Width | 0.1 | 2.5 | 1.20 |
-
-## Kết quả Models
-
-| Model | Accuracy | Điểm mạnh |
-|-------|----------|-----------|
-| Decision Tree | ~96% | Dễ hiểu, visualization tốt |
-| KNN | ~97% | Đơn giản, hiệu quả |
-| Naive Bayes | ~94% | Nhanh, ít tham số |
-| SoftMax | ~95% | Xác suất rõ ràng |
-| Hard Voting | ~97% | Ổn định, robust |
-| Stacking | ~97% | Hiệu suất cao nhất |
-
-## Chi tiết kỹ thuật
-
-### Decision Tree
-- Criterion: Entropy hoặc Gini
-- Max depth: Configurable
-- Pruning: Optional
-
-### KNN
-- K selection: Cross-validation tự động
-- Distance: Euclidean
-- Weighting: Inverse distance
-
-### Naive Bayes
-- Type: Gaussian
-- Features: Độc lập điều kiện
-- Smoothing: Laplace (nếu cần)
-
-### SoftMax
-- Optimizer: Gradient Descent
-- Learning rate: 0.01
-- Regularization: L2 (optional)
-
-### Ensemble
-- Hard Voting: Majority vote
-- Stacking: Meta-classifier (Softmax)
-- Base models: All 4 basic models
-
-## Notebooks
-
-Các Jupyter notebooks trong `src/notebooks/`:
-
-1. **train_*.ipynb** - Training notebooks cho từng model
-2. **test_models.ipynb** - So sánh và đánh giá tất cả models
-3. **test_ablation.ipynb** - Phân tích ảnh hưởng của từng feature
-
-## Troubleshooting
-
-### Lỗi: "Model doesn't have predict method"
-- **Nguyên nhân**: Cache cũ hoặc model chưa train
-- **Giải pháp**: Clear cache Streamlit (nhấn `C`) hoặc train lại model
-
-### Lỗi: "Meta-classifier not trained" (Stacking)
-- **Nguyên nhân**: Model chưa train meta-classifier
-- **Giải pháp**: Chạy `python retrain_stacking.py`
-
-### Lỗi: "Module not found"
-- **Nguyên nhân**: Thiếu thư viện
-- **Giải pháp**: `pip install -r requirements.txt`
-
-## Team 4
-
-Dự án Machine Learning - Phân loại Iris Flowers
-
-## License
-
-Educational project - Free to use for learning purposes
-
-## Features nổi bật
-
-- Giao diện đẹp với Streamlit
-- 6 models ML khác nhau
-- Visualization và đánh giá chi tiết
-- Model persistence với pickle
-- Responsive UI
-- Dark/Light theme support
-- Model caching thông minh
-
----
-
-**Để bắt đầu:** `streamlit run main.py`
