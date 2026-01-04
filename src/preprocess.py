@@ -127,6 +127,6 @@ if __name__ == "__main__":
     
     # Step 2: Split data set into train and test (80%-20%) and save
     from sklearn.model_selection import train_test_split
-    df_train, df_test = train_test_split(df_cleaned, test_size=0.2, random_state=42, stratify=df_cleaned["species"])
+    df_train, df_test = train_test_split(df_cleaned, test_size=0.2, random_state=62, stratify=df_cleaned["species"])
     df_train.to_csv(os.path.join(project_root, "data", "IRIS_train.csv"), index=False)
     df_test.to_csv(os.path.join(project_root, "data", "IRIS_test.csv"), index=False)
