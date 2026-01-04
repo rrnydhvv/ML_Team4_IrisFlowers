@@ -136,6 +136,39 @@ class BaseEnsemble:
         acc = np.mean(np.array(y_pred) == np.array(y))
         print(f"Accuracy: {acc*100:.2f}%")
         return acc, y_pred, y
+    
+    def save_model(self, filepath):
+        """Lưu ensemble model (chỉ lưu config, không lưu lại base models)"""
+        model_data = {
+            'type': self.__class__.__name__,
+            'model_dir': self.model_dir,
+            'estimator_names': [name for name, _ in self.estimators]
+        }
+        
+        with open(filepath, 'wb') as f:
+            pickle.dump(model_data, f)
+        
+        print(f"Model saved to {filepath}")
+    
+    @staticmethod
+    def load_model(filepath):
+        """Load ensemble model từ file"""
+        with open(filepath, 'rb') as f:
+            model_data = pickle.load(f)
+        
+        model_type = model_data['type']
+        model_dir = model_data.get('model_dir')
+        
+        if model_type == 'HardVotingClassifier':
+            return HardVotingClassifier(model_dir=model_dir)
+        elif model_type == 'StackingClassifier':
+            use_probas = model_data.get('use_probas', True)
+            ensemble = StackingClassifier(model_dir=model_dir, use_probas=use_probas)
+            ensemble.meta_weights = model_data.get('meta_weights')
+            ensemble.meta_bias = model_data.get('meta_bias')
+            return ensemble
+        else:
+            raise ValueError(f"Unknown model type: {model_type}")
 
 
 class HardVotingClassifier(BaseEnsemble):
@@ -195,144 +228,6 @@ class HardVotingClassifier(BaseEnsemble):
             final_predictions.append(winner)
         
         return final_predictions
-
-
-class SoftVotingClassifier(BaseEnsemble):
-    """
-    Soft Voting Ensemble - Probability Averaging
-    Lấy trung bình xác suất từ các model, chọn class có xác suất cao nhất
-    """
-    
-    def __init__(self, model_dir=None, weights=None):
-        """
-        Args:
-            model_dir: Thư mục chứa các model
-            weights: Trọng số cho mỗi model (nếu None, dùng trọng số bằng nhau)
-        """
-        self.name = "Soft Voting"
-        self.weights = weights
-        super().__init__(model_dir)
-        
-        # Nếu không có weights, dùng trọng số bằng nhau
-        if self.weights is None:
-            self.weights = [1.0 / len(self.estimators)] * len(self.estimators)
-    
-    def _get_probabilities(self, X):
-        """
-        Lấy xác suất từ mỗi model
-        
-        Returns:
-            List of probability arrays, mỗi array shape (n_samples, n_classes)
-        """
-        n_samples = len(X)
-        n_classes = len(self.CLASS_ORDER)
-        
-        X_test_df = pd.DataFrame(X, columns=self.FEATURE_COLS)
-        X_test_df[self.LABEL_COL] = self.CLASS_ORDER[0]
-        
-        all_probas = []
-        
-        for name, estimator in self.estimators:
-            if name == 'softmax':
-                probas = estimator.predict_proba(X)
-            
-            elif name == 'knn':
-                probas = self._knn_probabilities(estimator, X_test_df)
-            
-            elif name == 'naive_bayes':
-                probas = self._naive_bayes_probabilities(estimator, X)
-            
-            elif name == 'decision_tree':
-                preds = estimator.predict(X)
-                probas = np.zeros((n_samples, n_classes))
-                for i, pred in enumerate(preds):
-                    probas[i, self._label_to_index(pred)] = 1.0
-            
-            else:
-                preds = estimator.predict(X)
-                probas = np.zeros((n_samples, n_classes))
-                for i, pred in enumerate(preds):
-                    probas[i, self._label_to_index(pred)] = 1.0
-            
-            all_probas.append(probas)
-        
-        return all_probas
-    
-    def _knn_probabilities(self, estimator, X_test_df):
-        """Tính xác suất cho KNN dựa trên weighted voting"""
-        n_samples = len(X_test_df)
-        n_classes = len(self.CLASS_ORDER)
-        probas = np.zeros((n_samples, n_classes))
-        
-        for i in range(n_samples):
-            x_new = X_test_df.iloc[i][estimator.feature_cols].values
-            
-            dist = np.zeros(len(estimator.train_data))
-            for j, col in enumerate(estimator.feature_cols):
-                dist += (estimator.train_data[col].values - x_new[j]) ** 2
-            dist = np.sqrt(dist)
-            
-            df_tmp = estimator.train_data.copy()
-            df_tmp["dist"] = dist
-            neighbors = df_tmp.sort_values("dist").head(estimator.best_k)
-            
-            epsilon = 1e-10
-            neighbors["weight"] = 1.0 / (neighbors["dist"] + epsilon)
-            
-            total_weight = neighbors["weight"].sum()
-            for c in self.CLASS_ORDER:
-                class_weight = neighbors[neighbors[estimator.label_col] == c]["weight"].sum()
-                probas[i, self._label_to_index(c)] = class_weight / total_weight
-        
-        return probas
-    
-    def _naive_bayes_probabilities(self, estimator, X):
-        """Tính xác suất cho Naive Bayes"""
-        n_samples = len(X)
-        n_classes = len(self.CLASS_ORDER)
-        probas = np.zeros((n_samples, n_classes))
-        
-        for i, x in enumerate(X):
-            log_probs = {}
-            for c in estimator.classes:
-                log_prior = np.log(estimator.priors[c])
-                log_likelihood = np.sum(np.log(
-                    estimator._gaussian_likelihood(x, estimator.means[c], estimator.vars[c])
-                ))
-                log_probs[c] = log_prior + log_likelihood
-            
-            max_log = max(log_probs.values())
-            probs = {c: np.exp(lp - max_log) for c, lp in log_probs.items()}
-            total = sum(probs.values())
-            
-            for c, p in probs.items():
-                probas[i, self._label_to_index(c)] = p / total
-        
-        return probas
-    
-    def predict_proba(self, X):
-        """Tính xác suất trung bình có trọng số"""
-        if not self.is_fitted:
-            raise Exception("Model chưa được load.")
-        
-        all_probas = self._get_probabilities(X)
-        
-        n_samples = len(X)
-        n_classes = len(self.CLASS_ORDER)
-        avg_probas = np.zeros((n_samples, n_classes))
-        
-        for probas, weight in zip(all_probas, self.weights):
-            avg_probas += weight * probas
-        
-        avg_probas = avg_probas / avg_probas.sum(axis=1, keepdims=True)
-        
-        return avg_probas
-    
-    def predict(self, X):
-        """Dự đoán class có xác suất cao nhất"""
-        probas = self.predict_proba(X)
-        pred_indices = np.argmax(probas, axis=1)
-        return [self._index_to_label(idx) for idx in pred_indices]
 
 
 class StackingClassifier(BaseEnsemble):
@@ -395,6 +290,25 @@ class StackingClassifier(BaseEnsemble):
         
         print(f"Meta-classifier trained with {n_features} stacked features.")
         return self
+    
+    def save_model(self, filepath):
+        """Lưu stacking model bao gồm cả meta-classifier"""
+        if self.meta_weights is None:
+            raise Exception("Chưa train meta-classifier. Hãy gọi fit_meta() trước khi save.")
+        
+        model_data = {
+            'type': self.__class__.__name__,
+            'model_dir': self.model_dir,
+            'estimator_names': [name for name, _ in self.estimators],
+            'use_probas': self.use_probas,
+            'meta_weights': self.meta_weights,
+            'meta_bias': self.meta_bias
+        }
+        
+        with open(filepath, 'wb') as f:
+            pickle.dump(model_data, f)
+        
+        print(f"Model saved to {filepath}")
     
     def _create_meta_features(self, X):
         """Tạo meta-features từ base models"""
@@ -527,10 +441,9 @@ if __name__ == "__main__":
     if X_test is not None:
         hv_acc, _, _ = hard_voting.evaluate(X_test, y_test)
     
-    # Test Soft Voting
-    print("\n>>> SOFT VOTING <<<")
-    soft_voting = SoftVotingClassifier()
-    sv_acc, _, _ = soft_voting.evaluate(X_test, y_test)
+    # Save Hard Voting model
+    print("\n>>> SAVING HARD VOTING MODEL <<<")
+    hard_voting.save_model('hard_voting_ensemble.pkl')
     
     # Test Stacking (cần fit meta-classifier trên train set)
     print("\n>>> STACKING <<<")
@@ -538,13 +451,29 @@ if __name__ == "__main__":
     stacking.fit_meta(X_train, y_train)  # Chỉ train meta-classifier
     st_acc, _, _ = stacking.evaluate(X_test, y_test)
     
+    # Save Stacking model
+    print("\n>>> SAVING STACKING MODEL <<<")
+    stacking.save_model('stacking_ensemble.pkl')
+    
+    # Demo load models
+    print("\n>>> LOADING MODELS <<<")
+    loaded_hv = BaseEnsemble.load_model('hard_voting_ensemble.pkl')
+    loaded_st = BaseEnsemble.load_model('stacking_ensemble.pkl')
+    
+    print(f"Loaded {loaded_hv.name}")
+    print(f"Loaded {loaded_st.name}")
+    
+    # Test loaded models
+    print("\n>>> TESTING LOADED MODELS <<<")
+    loaded_hv_acc, _, _ = loaded_hv.evaluate(X_test, y_test)
+    loaded_st_acc, _, _ = loaded_st.evaluate(X_test, y_test)
+    
     # Summary
     print("\n" + "=" * 60)
     print("                    SUMMARY")
     print("=" * 60)
-    print(f"{'Method':<20} | {'Accuracy':>10}")
-    print("-" * 35)
-    print(f"{'Hard Voting':<20} | {hv_acc*100:>9.2f}%")
-    print(f"{'Soft Voting':<20} | {sv_acc*100:>9.2f}%")
-    print(f"{'Stacking':<20} | {st_acc*100:>9.2f}%")
+    print(f"{'Method':<25} | {'Original':>10} | {'Loaded':>10}")
+    print("-" * 50)
+    print(f"{'Hard Voting':<25} | {hv_acc*100:>9.2f}% | {loaded_hv_acc*100:>9.2f}%")
+    print(f"{'Stacking':<25} | {st_acc*100:>9.2f}% | {loaded_st_acc*100:>9.2f}%")
     print("=" * 60)
