@@ -2,6 +2,31 @@ import pandas as pd
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
+
+# --- CẤU HÌNH ---
+TRAIN_FILE = '../../data/IRIS_train.csv'
+TEST_FILE = '../../data/IRIS_test.csv'
+MODEL_FILE = 'knn_model.pkl'
+FEATURE_COLS = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
+LABEL_COL = 'species'
+
+def load_data(train_file=TRAIN_FILE, test_file=TEST_FILE):
+    """Load dữ liệu từ file CSV train và test riêng biệt"""
+    try:
+        df_train = pd.read_csv(train_file)
+        df_test = pd.read_csv(test_file)
+        
+        # Xử lý tên cột có khoảng trắng
+        df_train.columns = df_train.columns.str.strip()
+        df_test.columns = df_test.columns.str.strip()
+        
+        print(f"Train: {len(df_train)} dòng | Test: {len(df_test)} dòng")
+        return df_train, df_test
+        
+    except FileNotFoundError as e:
+        print(f"Lỗi: Không tìm thấy file - {e}")
+        return None, None
+
 def knn_predict_weighted(train_df, x_new, feature_cols, k):
     dist = np.zeros(len(train_df))
     for i, col in enumerate(feature_cols):
@@ -48,17 +73,17 @@ def evaluate_knn_kfold(df, feature_cols, label_col, k, n_folds=5, random_state=4
     return np.mean(accuracies)
 
 
-def run_knn_train_test(df, test_size=0.2, random_state=42):
+def run_knn_train_test(train_df, test_df, random_state=42):
+    """Chạy toàn bộ pipeline train và test KNN với train/test dataframes riêng"""
     # Xử lý tên cột có khoảng trắng
-    df.columns = df.columns.str.strip()
+    train_df.columns = train_df.columns.str.strip()
+    test_df.columns = test_df.columns.str.strip()
     
-    feature_cols = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
-    label_col = "species"
+    feature_cols = FEATURE_COLS
+    label_col = LABEL_COL
 
-    df_shuffled = df.sample(frac=1, random_state=random_state).reset_index(drop=True)
-    n_test = max(1, int(len(df) * test_size))
-    train_norm = df_shuffled.iloc[:-n_test].reset_index(drop=True)
-    test_norm = df_shuffled.iloc[-n_test:].reset_index(drop=True)
+    train_norm = train_df.reset_index(drop=True)
+    test_norm = test_df.reset_index(drop=True)
 
     print("Chọn K bằng 5-Fold Cross-Validation trên tập train:")
     print(f"{'k':>3} | {'Accuracy (CV)':>15}")
@@ -168,4 +193,12 @@ def plot_confusion_matrix(y_true, y_pred, class_labels):
     plt.tight_layout()
     plt.show()
 
+
+if __name__ == "__main__":
+    train_df, test_df = load_data(TRAIN_FILE, TEST_FILE)
+    
+    if train_df is not None and test_df is not None:
+        train_results, best_k, best_train_acc, test_acc, model, y_true_list, y_pred_list = run_knn_train_test(train_df, test_df)
+        save_model_KNN(model, MODEL_FILE)
+        print(f"\n[OK] Đã lưu model tại: {MODEL_FILE}")
 

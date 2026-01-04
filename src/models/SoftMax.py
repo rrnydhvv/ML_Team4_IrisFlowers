@@ -4,28 +4,27 @@ import pickle
 import matplotlib.pyplot as plt
 
 # --- CẤU HÌNH ---
-INPUT_FILE = './data/IRIS_cleaned.csv'
-MODEL_FILE = './src/models/softmax_model.pkl'
+TRAIN_FILE = '../../data/IRIS_train.csv'
+TEST_FILE = '../../data/IRIS_test.csv'
+MODEL_FILE = 'softmax_model.pkl'
 LEARNING_RATE = 0.1
 EPOCHS = 200
 BATCH_SIZE = 10
 CLASS_ORDER = ['Iris-setosa', 'Iris-versicolor', 'Iris-virginica']
+FEATURE_COLS = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
+LABEL_COL = 'species'
 
-def load_and_split_data(filename, train_ratio=0.8):
+def load_data(train_file=TRAIN_FILE, test_file=TEST_FILE):
+    """Load dữ liệu từ file CSV train và test riêng biệt"""
     try:
-        df = pd.read_csv(filename)
-        # Shuffle dữ liệu ngay từ đầu
-        df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+        df_train = pd.read_csv(train_file)
+        df_test = pd.read_csv(test_file)
         
-        split_idx = int(len(df) * train_ratio)
-        df_train = df.iloc[:split_idx]
-        df_test = df.iloc[split_idx:]
-        
-        print(f"Dataset: {len(df)} dòng. Train: {len(df_train)} | Test: {len(df_test)}")
+        print(f"Train: {len(df_train)} dòng | Test: {len(df_test)} dòng")
         
         def to_numpy(df_sub):
-            x = df_sub.iloc[:, :4].values
-            y_labels = df_sub.iloc[:, -1].values
+            x = df_sub[FEATURE_COLS].values
+            y_labels = df_sub[LABEL_COL].values
             y_onehot = np.zeros((len(y_labels), len(CLASS_ORDER)))
             for i, label in enumerate(y_labels):
                 if label in CLASS_ORDER:
@@ -37,8 +36,8 @@ def load_and_split_data(filename, train_ratio=0.8):
         
         return x_train, y_train, x_test, y_test
 
-    except FileNotFoundError:
-        print(f"Lỗi: Không tìm thấy file {filename}")
+    except FileNotFoundError as e:
+        print(f"Lỗi: Không tìm thấy file - {e}")
         return None, None, None, None
 
 def softmax(z):
@@ -107,16 +106,23 @@ def export_model(W, b, filename):
         pickle.dump(model_data, f)
     print(f"\n[OK] Đã xuất model tại: {filename}")
 
+def test(x_test, y_test, W, b):
+    """Đánh giá model trên tập test"""
+    z_test = np.dot(x_test, W) + b
+    y_pred = np.argmax(softmax(z_test), axis=1)
+    y_true = np.argmax(y_test, axis=1)
+    acc = np.mean(y_pred == y_true) * 100
+    return acc, y_pred, y_true
+
 if __name__ == "__main__":
-    x_train, y_train, x_test, y_test = load_and_split_data(INPUT_FILE)
+    x_train, y_train, x_test, y_test = load_data(TRAIN_FILE, TEST_FILE)
     
     if x_train is not None:
         W, b, losses = train(x_train, y_train, LEARNING_RATE, EPOCHS, BATCH_SIZE)
         
-        z_test = np.dot(x_test, W) + b
-        y_pred = np.argmax(softmax(z_test), axis=1)
-        y_true = np.argmax(y_test, axis=1)
-        acc = np.mean(y_pred == y_true) * 100
+        acc, y_pred, y_true = test(x_test, y_test, W, b)
         print(f"Độ chính xác trên tập Test: {acc:.2f}%")
         
         export_model(W, b, MODEL_FILE)
+        
+    
