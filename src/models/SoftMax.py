@@ -282,7 +282,7 @@ MODEL_FILE = os.path.join(base_dir, 'softmax_model.pkl')
 
 if __name__ == "__main__":
     # Khởi tạo classifier
-    clf = SoftMaxClassifier(learning_rate=0.01, epochs=3000, batch_size=10)
+    clf = SoftMaxClassifier(learning_rate=0.1, epochs=3000, batch_size=10)
     
     # Load dữ liệu
     x_train, y_train, x_test, y_test = clf.load_data(TRAIN_FILE, TEST_FILE)
