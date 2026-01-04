@@ -11,22 +11,37 @@ class DecisionTreeClassifier:
     FEATURE_COLS = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
     LABEL_COL = 'species'
     
-    def __init__(self, max_depth=None, criterion="entropy"):
+    def __init__(self, max_depth=None, criterion="entropy", feature_cols=None):
         """
         Khởi tạo Decision Tree Classifier
         
         Args:
             max_depth: Độ sâu tối đa của cây (None = không giới hạn)
             criterion: Tiêu chí phân chia ('entropy' hoặc 'gini')
+            feature_cols: Danh sách features để sử dụng (mặc định: tất cả)
         """
         if criterion not in ("entropy", "gini"):
             raise ValueError("criterion must be 'entropy' or 'gini'")
         self.max_depth = max_depth
         self.criterion = criterion
+        self.feature_cols = feature_cols or self.FEATURE_COLS
         self.tree = None
-        self.feature_cols = self.FEATURE_COLS
         self.label_col = self.LABEL_COL
         self.is_fitted = False
+    
+    def set_feature_cols(self, feature_cols):
+        """
+        Đặt lại danh sách features (hữu ích cho ablation study)
+        
+        Args:
+            feature_cols: Danh sách tên features
+            
+        Returns:
+            self
+        """
+        self.feature_cols = feature_cols
+        print(f"Features updated: {self.feature_cols}")
+        return self
 
     def load_data(self, train_file, test_file):
         """

@@ -16,7 +16,7 @@ class SoftMaxClassifier:
     FEATURE_COLS = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
     LABEL_COL = 'species'
     
-    def __init__(self, learning_rate=None, epochs=None, batch_size=None):
+    def __init__(self, learning_rate=None, epochs=None, batch_size=None, feature_cols=None):
         """
         Khởi tạo SoftMax Classifier
         
@@ -24,16 +24,32 @@ class SoftMaxClassifier:
             learning_rate: Tốc độ học (mặc định: 0.1)
             epochs: Số lần lặp (mặc định: 200)
             batch_size: Kích thước batch (mặc định: 10)
+            feature_cols: Danh sách features để sử dụng (mặc định: tất cả)
         """
         self.learning_rate = learning_rate or self.DEFAULT_LEARNING_RATE
         self.epochs = epochs or self.DEFAULT_EPOCHS
         self.batch_size = batch_size or self.DEFAULT_BATCH_SIZE
+        self.feature_cols = feature_cols or self.FEATURE_COLS
         
         # Weights và bias sẽ được khởi tạo khi fit
         self.W = None
         self.b = None
         self.losses = []
         self.is_fitted = False
+    
+    def set_feature_cols(self, feature_cols):
+        """
+        Đặt lại danh sách features (hữu ích cho ablation study)
+        
+        Args:
+            feature_cols: Danh sách tên features
+            
+        Returns:
+            self
+        """
+        self.feature_cols = feature_cols
+        print(f"Features updated: {self.feature_cols}")
+        return self
     
     @staticmethod
     def _softmax(z):
@@ -65,11 +81,12 @@ class SoftMaxClassifier:
             df_test = pd.read_csv(test_file)
             
             print(f"Train: {len(df_train)} dòng | Test: {len(df_test)} dòng")
+            print(f"Using features: {self.feature_cols}")
             
-            x_train = df_train[self.FEATURE_COLS].values
+            x_train = df_train[self.feature_cols].values
             y_train = self._to_onehot(df_train[self.LABEL_COL].values)
             
-            x_test = df_test[self.FEATURE_COLS].values
+            x_test = df_test[self.feature_cols].values
             y_test = self._to_onehot(df_test[self.LABEL_COL].values)
             
             return x_train, y_train, x_test, y_test

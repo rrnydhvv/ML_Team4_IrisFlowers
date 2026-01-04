@@ -11,24 +11,39 @@ class KNNClassifier:
     FEATURE_COLS = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
     LABEL_COL = 'species'
     
-    def __init__(self, k=None, random_state=42):
+    def __init__(self, k=None, random_state=42, feature_cols=None):
         """
         Khởi tạo KNN Classifier
         
         Args:
             k: Số láng giềng (nếu None sẽ tự động chọn bằng cross-validation)
             random_state: Random seed cho reproducibility
+            feature_cols: Danh sách features để sử dụng (mặc định: tất cả)
         """
         self.k = k
         self.random_state = random_state
+        self.feature_cols = feature_cols or self.FEATURE_COLS
         self.best_k = None
         self.train_data = None
-        self.feature_cols = self.FEATURE_COLS
         self.label_col = self.LABEL_COL
         self.is_fitted = False
         self.train_results = []
         self.y_true_test = []
         self.y_pred_test = []
+    
+    def set_feature_cols(self, feature_cols):
+        """
+        Đặt lại danh sách features (hữu ích cho ablation study)
+        
+        Args:
+            feature_cols: Danh sách tên features
+            
+        Returns:
+            self
+        """
+        self.feature_cols = feature_cols
+        print(f"Features updated: {self.feature_cols}")
+        return self
     
     def load_data(self, train_file, test_file):
         """

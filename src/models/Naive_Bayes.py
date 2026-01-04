@@ -10,15 +10,33 @@ class GaussianNaiveBayesClassifier:
     FEATURE_COLS = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
     LABEL_COL = 'species'
     
-    def __init__(self):
-        """Khởi tạo Gaussian Naive Bayes Classifier"""
+    def __init__(self, feature_cols=None):
+        """Khởi tạo Gaussian Naive Bayes Classifier
+        
+        Args:
+            feature_cols: Danh sách features để sử dụng (mặc định: tất cả)
+        """
         self.classes = None  # C
         self.means = {}  # {class: [mean_feature1, mean_feature2, ...]}
         self.vars = {}  # {class: [var_feature1, var_feature2, ...]} phương sai
         self.priors = {}  # {class: prior_probability} tiên nghiệm
-        self.feature_cols = self.FEATURE_COLS
+        self.feature_cols = feature_cols or self.FEATURE_COLS
         self.label_col = self.LABEL_COL
         self.is_fitted = False
+
+    def set_feature_cols(self, feature_cols):
+        """
+        Đặt lại danh sách features (hữu ích cho ablation study)
+        
+        Args:
+            feature_cols: Danh sách tên features
+            
+        Returns:
+            self
+        """
+        self.feature_cols = feature_cols
+        print(f"Features updated: {self.feature_cols}")
+        return self
 
     def load_data(self, train_file, test_file):
         """
@@ -36,6 +54,7 @@ class GaussianNaiveBayesClassifier:
             df_test = pd.read_csv(test_file)
             
             print(f"Train: {len(df_train)} dòng | Test: {len(df_test)} dòng")
+            print(f"Using features: {self.feature_cols}")
             
             X_train = df_train[self.feature_cols].values
             y_train = df_train[self.label_col].values
