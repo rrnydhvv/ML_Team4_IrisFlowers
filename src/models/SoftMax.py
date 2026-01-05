@@ -10,7 +10,7 @@ class SoftMaxClassifier:
     
     # --- CẤU HÌNH MẶC ĐỊNH ---
     DEFAULT_LEARNING_RATE = 0.1
-    DEFAULT_EPOCHS = 200
+    DEFAULT_EPOCHS = 3000
     DEFAULT_BATCH_SIZE = 10
     CLASS_ORDER = ['Iris-setosa', 'Iris-versicolor', 'Iris-virginica']
     FEATURE_COLS = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
