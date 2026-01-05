@@ -53,6 +53,17 @@ ML_Team4_IrisFlowers/
 │       ├── train_*.ipynb        # Training notebooks cho từng model
 ```
 
+## Documentation
+
+Tài liệu chi tiết theo từng mô hình (xem trong thư mục `docs/`):
+
+- `docs/decision_tree.md` — Decision Tree
+- `docs/knn.md` — KNN (Weighted Distance)
+- `docs/naive_bayes.md` — Gaussian Naive Bayes
+- `docs/softmax.md` — SoftMax Regression
+- `docs/hard_voting.md` — Hard Voting Ensemble
+- `docs/stacking.md` — Stacking Ensemble
+
 ## Cài đặt và Chạy
 
 ### 1. Cài đặt thư viện
